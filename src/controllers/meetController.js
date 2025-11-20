@@ -1,6 +1,7 @@
 import { generateMeetLink } from "../services/googleMeet.js";
 import { logInfo, logError } from "../utils/logger.js";
-import supabase from "../config/supabase.js"; // import your Supabase client
+//import supabase from "../config/supabase.js"; // import your Supabase client
+import { supabase } from "../config/supabase.js"; // note the braces
 
 export async function createMeeting(req, res) {
   try {
