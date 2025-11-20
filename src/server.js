@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import meetRoutes from "./routes/meetRoutes.js";
+import oauthRoutes from "./routes/oauthRoutes.js";
 
 dotenv.config();
 
@@ -20,6 +21,8 @@ app.use(express.json());
 
 // ------------------ Routes ------------------
 app.use("/api/meet", meetRoutes);
+app.use("/api/oauth", oauthRoutes); // <-- added
+
 
 // ------------------ Start Server ------------------
 const PORT = process.env.PORT || 5000;
