@@ -11,7 +11,7 @@ const supabase = createClient(
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
-const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI; // e.g., https://your-backend.onrender.com/api/oauth/google/callback
+const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI;
 
 export const googleOAuthRedirect = (req, res) => {
   const scopes = [
@@ -26,7 +26,11 @@ export const googleOAuthRedirect = (req, res) => {
 
 export const googleOAuthCallback = async (req, res) => {
   const code = req.query.code;
-  if (!code) return res.status(400).send("Missing code");
+  const userId = req.query.user_id;
+
+  if (!code || !userId) {
+    return res.status(400).send("Missing authorization code or user ID");
+  }
 
   try {
     // Exchange code for tokens
@@ -45,25 +49,28 @@ export const googleOAuthCallback = async (req, res) => {
     const tokenData = await tokenRes.json();
 
     if (!tokenData.access_token) {
-      return res.status(400).json({ error: "Failed to get tokens" });
+      console.error("Token response:", tokenData);
+      return res.status(400).send("Failed to obtain access token from Google");
     }
 
-    // Optional: save tokens to Supabase profile
-    const userId = req.query.user_id; // Pass mentor ID from frontend if needed
-    if (userId) {
-      await supabase
-        .from("profiles")
-        .update({
-          google_access_token: tokenData.access_token,
-          google_refresh_token: tokenData.refresh_token,
-          google_token_expiry: new Date(Date.now() + tokenData.expires_in * 1000).toISOString(),
-        })
-        .eq("id", userId);
-    }
+    // Save tokens to Supabase
+    const { data, error } = await supabase
+      .from("profiles")
+      .update({
+        google_access_token: tokenData.access_token,
+        google_refresh_token: tokenData.refresh_token,
+        google_token_expiry: new Date(Date.now() + tokenData.expires_in * 1000).toISOString(),
+      })
+      .eq("id", userId)
+      .select();
+
+    console.log("Supabase update:", data, error);
+
+    if (error) return res.status(500).send("Failed to save tokens in Supabase");
 
     res.send("Google account connected successfully! You can close this page.");
   } catch (err) {
     console.error("OAuth error:", err);
-    res.status(500).send("Internal server error");
+    res.status(500).send("Internal server error during OAuth");
   }
 };
